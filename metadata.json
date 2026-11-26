@@ -1,0 +1,8 @@
+{
+  "name": "Chainwork — Daily Word-Chain & Tile Logic",
+  "description": "A daily word-chain and tile-logic puzzle game with crisp card animations, a three-tier hint system, streak statistics, and spoiler-free result grids.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
