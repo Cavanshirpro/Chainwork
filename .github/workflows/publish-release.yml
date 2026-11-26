@@ -1,0 +1,62 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Validate the release or publish the verified candidate
+        type: choice
+        required: true
+        default: validate
+        options:
+          - validate
+          - publish
+      build_run_id:
+        description: Successful artifact build run ID (blank selects the newest for this commit)
+        type: string
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: chainwork-release-publish
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Release preflight
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      build_run_id: ${{ steps.validate.outputs.build_run_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - id: validate
+        name: Verify CI, source, version and assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: python3 tools/publish_release.py validate --build-run-id "$BUILD_RUN_ID"
+
+  publish:
+    name: Publish verified release
+    needs: preflight
+    if: inputs.mode == 'publish' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Verify and publish the selected candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ needs.preflight.outputs.build_run_id }}
+        run: python3 tools/publish_release.py publish --build-run-id "$BUILD_RUN_ID"

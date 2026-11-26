@@ -1,0 +1,40 @@
+name: Build Release Artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-artifacts-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+      - run: python3 tools/release.py metadata
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: node --import tsx --test src/game/rules.test.ts
+      - run: bun run build
+      - name: Package and verify release files
+        run: python3 tools/release.py build --sha "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: out/release-assets/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-manifest
+          path: out/release-manifest/manifest.json
+          if-no-files-found: error
